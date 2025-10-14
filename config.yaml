@@ -1,0 +1,76 @@
+# Qwen Text Classification Training Configuration
+# Edit these values to customize your training
+
+# Model Configuration
+model:
+  name: "Qwen/Qwen2.5-0.5B-Instruct"  # Options: 0.5B, 1.5B, 3B (larger = better but slower)
+  max_length: 256  # Maximum sequence length
+
+# Data Configuration
+data:
+  train_file: "training_data/train.jsonl"
+  val_file: "training_data/val.jsonl"
+  test_file: "training_data/test.jsonl"
+  augment: true  # Enable data augmentation
+  augmentation_factor: 3  # How many variations per example
+
+# Training Hyperparameters
+training:
+  num_epochs: 10  # Training epochs (increase for better accuracy)
+  batch_size: 4  # Per-device batch size (reduce if OOM)
+  gradient_accumulation_steps: 4  # Effective batch = batch_size * this
+  learning_rate: 2.0e-5  # Learning rate (lower = more stable)
+  warmup_steps: 50  # Warmup steps
+  weight_decay: 0.01  # Weight decay for regularization
+
+# Evaluation
+evaluation:
+  eval_steps: 50  # Evaluate every N steps
+  save_steps: 50  # Save checkpoint every N steps
+  logging_steps: 10  # Log metrics every N steps
+  early_stopping_patience: 3  # Stop if no improvement for N evals
+
+# Optimization (M1 Mac specific)
+optimization:
+  use_mps: true  # Use Metal Performance Shaders (M1/M2/M3)
+  fp16: false  # Don't use fp16 on M1
+  bf16: false  # Use bf16 if available
+  dataloader_workers: 0  # Number of data loading workers
+
+# Output
+output:
+  model_dir: "./qwen_classifier"
+  onnx_dir: "./qwen_classifier_onnx"
+  quantized_dir: "./qwen_classifier_onnx_quantized"
+  save_total_limit: 3  # Keep only N best checkpoints
+
+# ONNX Export
+onnx:
+  quantize: true  # Apply INT8 quantization
+  opset_version: 14  # ONNX opset version
+  test_inference: true  # Test ONNX model after export
+
+# Categories (update with your own)
+categories:
+  - "HR"
+  - "IT"
+  - "Sales"
+  - "Finance"
+  - "Operations"
+  - "Legal"
+  - "Marketing"
+  - "Customer Support"
+
+# Advanced Settings
+advanced:
+  seed: 42  # Random seed for reproducibility
+  load_best_model_at_end: true  # Load best checkpoint after training
+  metric_for_best_model: "eval_loss"  # Metric to determine best model
+  greater_is_better: false  # For eval_loss, lower is better
+
+# Notes:
+# - Increase num_epochs (15-20) for better accuracy with more data
+# - Decrease batch_size (2 or 1) if you get out-of-memory errors
+# - Try 1.5B or 3B model for better accuracy (but slower training)
+# - Increase learning_rate (5e-5) for faster convergence with large datasets
+# - Disable augment if you have lots of data (500+ examples)

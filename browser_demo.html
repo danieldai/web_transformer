@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qwen Text Classifier - Browser Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+
+        .examples {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .examples h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .example-btn {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border: 1px solid #d0d0d0;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .example-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            border-radius: 5px;
+            font-size: 0.9em;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Qwen Text Classifier</h1>
+        <p class="subtitle">AI-powered question classification using fine-tuned Qwen2.5</p>
+
+        <div id="status" class="status loading">
+            <span class="loader"></span>
+            <span id="statusText">Loading model... This may take a minute on first load.</span>
+        </div>
+
+        <div class="input-group">
+            <label for="questionInput">Enter your question:</label>
+            <textarea
+                id="questionInput"
+                placeholder="e.g., How many vacation days do I have left?"
+            ></textarea>
+        </div>
+
+        <button id="classifyBtn" onclick="classifyQuestion()" disabled>
+            Classify Question
+        </button>
+
+        <div id="result" class="result">
+            <h3>Classification Result:</h3>
+            <div class="category-badge" id="categoryResult"></div>
+        </div>
+
+        <div class="examples">
+            <h3>Try these examples:</h3>
+            <div class="example-btn" onclick="setExample('How many vacation days do I have left?')">HR Question</div>
+            <div class="example-btn" onclick="setExample('My laptop won\'t start')">IT Question</div>
+            <div class="example-btn" onclick="setExample('What\'s my Q4 sales quota?')">Sales Question</div>
+            <div class="example-btn" onclick="setExample('How do I submit an expense report?')">Finance Question</div>
+            <div class="example-btn" onclick="setExample('What\'s the status of shipment #12345?')">Operations Question</div>
+        </div>
+
+        <div class="info">
+            <strong>Note:</strong> This demo requires your fine-tuned ONNX model to be hosted and accessible.
+            Update the <code>MODEL_PATH</code> in the script below with your model location (Hugging Face Hub or local server).
+        </div>
+    </div>
+
+    <script type="module">
+        // Import transformers.js
+        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
+
+        // Configuration
+        // TODO: Update this path to your model location
+        // Option 1: Hugging Face Hub - 'username/model-name'
+        // Option 2: Local server - './qwen_classifier_onnx_quantized'
+        const MODEL_PATH = 'Qwen/Qwen2.5-0.5B-Instruct'; // Default to base model for demo
+
+        const CATEGORIES = ["HR", "IT", "Sales", "Finance", "Operations", "Legal", "Marketing", "Customer Support"];
+
+        let classifier;
+        let isModelLoaded = false;
+
+        // Load model
+        async function loadModel() {
+            try {
+                updateStatus('loading', 'Loading model... This may take a minute on first load.');
+
+                // For text classification with causal LM, we use text-generation
+                classifier = await pipeline('text-generation', MODEL_PATH, {
+                    quantized: true, // Use quantized model for faster inference
+                });
+
+                isModelLoaded = true;
+                updateStatus('ready', '✓ Model loaded and ready!');
+                document.getElementById('classifyBtn').disabled = false;
+
+            } catch (error) {
+                console.error('Error loading model:', error);
+                updateStatus('error', `Failed to load model: ${error.message}`);
+            }
+        }
+
+        // Update status message
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+
+            statusEl.className = `status ${type}`;
+            statusText.textContent = message;
+
+            if (type === 'loading') {
+                statusText.innerHTML = '<span class="loader"></span>' + message;
+            }
+        }
+
+        // Classify question
+        window.classifyQuestion = async function() {
+            const question = document.getElementById('questionInput').value.trim();
+
+            if (!question) {
+                alert('Please enter a question');
+                return;
+            }
+
+            if (!isModelLoaded) {
+                alert('Model is still loading, please wait...');
+                return;
+            }
+
+            // Disable button and show loading
+            const btn = document.getElementById('classifyBtn');
+            btn.disabled = true;
+            btn.textContent = 'Classifying...';
+            updateStatus('loading', 'Classifying question...');
+
+            try {
+                // Format prompt
+                const prompt = `Classify the following question into one of these categories: ${CATEGORIES.join(', ')}
+
+Question: ${question}
+Category:`;
+
+                // Generate prediction
+                const result = await classifier(prompt, {
+                    max_new_tokens: 10,
+                    temperature: 0.1,
+                    do_sample: false,
+                });
+
+                // Extract category from generated text
+                const generatedText = result[0].generated_text.slice(prompt.length).trim();
+                const predictedCategory = generatedText.split(/[\s\n]/)[0];
+
+                // Display result
+                document.getElementById('categoryResult').textContent = predictedCategory;
+                document.getElementById('result').classList.add('show');
+                updateStatus('ready', '✓ Classification complete!');
+
+            } catch (error) {
+                console.error('Error during classification:', error);
+                updateStatus('error', `Classification failed: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Classify Question';
+            }
+        }
+
+        // Set example question
+        window.setExample = function(question) {
+            document.getElementById('questionInput').value = question;
+            document.getElementById('result').classList.remove('show');
+        }
+
+        // Load model on page load
+        loadModel();
+    </script>
+</body>
+</html>
