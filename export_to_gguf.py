@@ -71,6 +71,28 @@ def check_llama_cpp():
             print(f"✓ Found llama.cpp at {llama_dir}")
             print(f"  Convert script: {convert_script.name}")
             print(f"  Quantize binary: {quant_bin.name}")
+
+            # Check and install llama.cpp Python dependencies
+            requirements_file = llama_dir / "requirements.txt"
+            if requirements_file.exists():
+                print(f"\n  Installing llama.cpp Python dependencies...")
+                try:
+                    # Try to install requirements (will skip if already installed)
+                    result = subprocess.run(
+                        [sys.executable, "-m", "pip", "install", "-q", "-r", str(requirements_file)],
+                        capture_output=True,
+                        text=True,
+                        timeout=120
+                    )
+                    if result.returncode == 0:
+                        print(f"  ✓ Python dependencies installed")
+                    else:
+                        print(f"  ⚠ Warning: Some dependencies may not have installed")
+                        print(f"     Run manually if needed: pip install -r {requirements_file}")
+                except Exception as e:
+                    print(f"  ⚠ Warning: Could not install dependencies automatically")
+                    print(f"     Please run: pip install -r {requirements_file}")
+
             return {"path": llama_dir, "convert": convert_script, "quantize": quant_bin}
 
     print("⚠ llama.cpp not found!")
