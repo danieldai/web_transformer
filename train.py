@@ -39,9 +39,9 @@ class Config:
     warmup_steps: int = 50
     weight_decay: float = 0.01
 
-    # Optimization for M1
-    fp16: bool = False  # M1 doesn't support fp16
-    bf16: bool = False  # Use bf16 if available
+    # Optimization for M1/CUDA
+    fp16: bool = False  # Auto-detect: use fp16 on CUDA, disabled on MPS
+    bf16: bool = False  # Auto-detect: use bf16 if available
     gradient_accumulation_steps: int = 4  # Effective batch size = 16
 
     # Evaluation
@@ -165,16 +165,28 @@ def main():
     torch.manual_seed(config.seed)
     np.random.seed(config.seed)
 
-    # Check for MPS (Metal Performance Shaders) on M1
-    if torch.backends.mps.is_available():
+    # Detect available device (CUDA > MPS > CPU)
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        gpu_name = torch.cuda.get_device_name(0)
+        gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
+        print(f"✓ Using CUDA GPU: {gpu_name}")
+        print(f"✓ GPU Memory: {gpu_memory:.1f} GB")
+        # Enable fp16 for CUDA
+        config.fp16 = True
+    elif torch.backends.mps.is_available():
         device = torch.device("mps")
         print("✓ Using Apple Silicon MPS acceleration")
+        # MPS doesn't support fp16 well, keep disabled
+        config.fp16 = False
     else:
         device = torch.device("cpu")
-        print("⚠ MPS not available, using CPU")
+        print("⚠ No GPU detected, using CPU (training will be slow)")
+        config.fp16 = False
 
     print(f"Model: {config.model_name}")
-    print(f"Device: {device}\n")
+    print(f"Device: {device}")
+    print(f"FP16 enabled: {config.fp16}\n")
 
     # Load tokenizer
     print("Loading tokenizer...")
@@ -190,10 +202,12 @@ def main():
 
     # Load model
     print("Loading model...")
+    # Use float16 on CUDA for faster training, float32 on MPS/CPU
+    dtype = torch.float16 if config.fp16 else torch.float32
     model = AutoModelForCausalLM.from_pretrained(
         config.model_name,
         trust_remote_code=True,
-        torch_dtype=torch.float32,  # M1 optimization
+        torch_dtype=dtype,
     )
 
     # Ensure model uses padding token
