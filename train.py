@@ -202,12 +202,11 @@ def main():
 
     # Load model
     print("Loading model...")
-    # Use float16 on CUDA for faster training, float32 on MPS/CPU
-    dtype = torch.float16 if config.fp16 else torch.float32
+    # Always load in FP32, Trainer will handle FP16 conversion if needed
     model = AutoModelForCausalLM.from_pretrained(
         config.model_name,
         trust_remote_code=True,
-        torch_dtype=dtype,
+        torch_dtype=torch.float32,  # Load in FP32, Trainer handles FP16
     )
 
     # Ensure model uses padding token
@@ -246,6 +245,7 @@ def main():
         bf16=config.bf16,
         fp16_full_eval=False,  # Disable FP16 for evaluation to avoid errors
         half_precision_backend="auto",  # Auto-select backend
+        optim="adamw_torch",  # Use PyTorch AdamW (more stable with FP16)
 
         # Saving
         save_total_limit=3,
