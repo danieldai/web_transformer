@@ -244,6 +244,8 @@ def main():
         # Optimization
         fp16=config.fp16,
         bf16=config.bf16,
+        fp16_full_eval=False,  # Disable FP16 for evaluation to avoid errors
+        half_precision_backend="auto",  # Auto-select backend
 
         # Saving
         save_total_limit=3,
